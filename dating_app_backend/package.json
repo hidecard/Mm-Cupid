@@ -1,0 +1,23 @@
+{
+  "name": "dating-app-backend",
+  "version": "1.0.0",
+  "description": "Dating App Backend - Vercel Serverless API",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js",
+    "dev": "node api/index.js",
+    "init-db": "node lib/init-db.js"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^13.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.0",
+    "pusher": "^5.1.6",
+    "serverless-http": "^3.2.0"
+  }
+}
