@@ -8,6 +8,9 @@
     "dev": "node api/index.js",
     "init-db": "node lib/init-db.js"
   },
+  "engines": {
+    "node": ">=18.x"
+  },
   "dependencies": {
     "@libsql/client": "^0.17.4",
     "bcryptjs": "^2.4.3",

@@ -290,7 +290,7 @@ app.get('/api/profiles', authenticate, requireOnboarded, async (req, res) => {
       LIMIT 10
     `;
 
-    params.push(myId, myId, myId, myId, myId, myId);
+    params.push(myId, myId, myId, myId, myId);
 
     const profiles = await db.query(sql, params);
 
@@ -460,10 +460,12 @@ app.get('/api/matches', authenticate, requireOnboarded, async (req, res) => {
     const myId = req.user.id;
 
     const sql = `
-      SELECT m.id AS match_id, m.created_at AS matched_at, 
+      SELECT m.id AS match_id, m.created_at AS matched_at,
+             cr.id AS room_id,
              u1.id AS user1_id, u1.name AS user1_name, u1.profile_pic AS user1_pic,
              u2.id AS user2_id, u2.name AS user2_name, u2.profile_pic AS user2_pic
       FROM matches m
+      LEFT JOIN chat_rooms cr ON m.id = cr.match_id
       JOIN users u1 ON m.user_one_id = u1.id
       JOIN users u2 ON m.user_two_id = u2.id
       WHERE m.user_one_id = ? OR m.user_two_id = ?
@@ -687,9 +689,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// For Vercel serverless
-module.exports = app;
-module.exports.handler = serverless(app);
+// Export for Vercel serverless
+module.exports = serverless(app);
 
 // For local development
 if (require.main === module) {
