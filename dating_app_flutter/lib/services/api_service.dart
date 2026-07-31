@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static String baseUrl = 'http://10.0.2.2:3000';
+  static String baseUrl = 'https://mm-cupid.vercel.app';
   static const String _tokenKey = 'auth_token';
 
   String? _token;
