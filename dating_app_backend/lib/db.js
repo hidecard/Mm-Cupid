@@ -1,5 +1,4 @@
 const mysql = require('mysql2/promise');
-const BetterSqlite = require('better-sqlite3');
 
 class Database {
   constructor() {
@@ -7,6 +6,7 @@ class Database {
     this.initialized = false;
     this.pool = null;
     this.db = null;
+    this._isLibsql = false;
   }
 
   async init() {
@@ -30,10 +30,9 @@ class Database {
         console.error('MySQL connection failed:', err.message);
       }
     } else {
-      const isRemote = process.env.TURSO_URL &&
-          (process.env.TURSO_URL.startsWith('https://') || process.env.TURSO_URL.startsWith('libsql://'));
-
-      if (isRemote) {
+      if (process.env.TURSO_URL &&
+          (process.env.TURSO_URL.startsWith('https://') ||
+           process.env.TURSO_URL.startsWith('libsql://'))) {
         const { createClient } = require('@libsql/client');
         this.db = createClient({
           url: process.env.TURSO_URL,
@@ -41,11 +40,22 @@ class Database {
         });
         this._isLibsql = true;
       } else {
-        const dbPath = process.env.TURSO_URL?.replace('file:', '') || 'dev.db';
-        this.db = new BetterSqlite(dbPath);
-        this._isLibsql = false;
-        this.db.pragma('journal_mode = WAL');
-        this.db.pragma('foreign_keys = ON');
+        const dbPath = (process.env.TURSO_URL?.replace('file:', '') || 'dev.db');
+        let BetterSqlite;
+        try {
+          BetterSqlite = require('better-sqlite3');
+        } catch (e) {
+          console.error('better-sqlite3 not available, using @libsql/client for local file');
+          const { createClient } = require('@libsql/client');
+          this.db = createClient({ url: 'file:' + dbPath });
+          this._isLibsql = true;
+        }
+        if (BetterSqlite) {
+          this.db = new BetterSqlite(dbPath);
+          this._isLibsql = false;
+          this.db.pragma('journal_mode = WAL');
+          this.db.pragma('foreign_keys = ON');
+        }
       }
     }
 
@@ -53,24 +63,29 @@ class Database {
     return this;
   }
 
+  _convertParams(params) {
+    return params.map(p => p === true ? 1 : p === false ? 0 : p);
+  }
+
   async query(sql, params = []) {
     await this.init();
+    const converted = this._convertParams(params);
 
     if (this.type === 'mysql') {
       const [rows] = await this.pool.execute(sql, params);
       return rows;
     } else if (this._isLibsql) {
-      const result = await this.db.execute({ sql, args: params });
+      const result = await this.db.execute({ sql, args: converted });
       return result.rows;
     } else {
       const stmt = this.db.prepare(sql);
-      const converted = params.map(p => p === true ? 1 : p === false ? 0 : p);
       return converted.length > 0 ? stmt.all(...converted) : stmt.all();
     }
   }
 
   async run(sql, params = []) {
     await this.init();
+    const converted = this._convertParams(params);
 
     if (this.type === 'mysql') {
       const [result] = await this.pool.execute(sql, params);
@@ -79,14 +94,13 @@ class Database {
         affectedRows: result.affectedRows,
       };
     } else if (this._isLibsql) {
-      const result = await this.db.execute({ sql, args: params });
+      const result = await this.db.execute({ sql, args: converted });
       return {
         insertId: result.lastInsertRowid !== undefined ? Number(result.lastInsertRowid) : null,
         affectedRows: result.rowsAffected,
       };
     } else {
       const stmt = this.db.prepare(sql);
-      const converted = params.map(p => p === true ? 1 : p === false ? 0 : p);
       const info = converted.length > 0 ? stmt.run(...converted) : stmt.run();
       return {
         insertId: Number(info.lastInsertRowid),
@@ -97,23 +111,22 @@ class Database {
 
   async get(sql, params = []) {
     await this.init();
+    const converted = this._convertParams(params);
 
     if (this.type === 'mysql') {
       const [rows] = await this.pool.execute(sql, params);
       return rows[0] || null;
     } else if (this._isLibsql) {
-      const result = await this.db.execute({ sql, args: params });
+      const result = await this.db.execute({ sql, args: converted });
       return result.rows[0] || null;
     } else {
       const stmt = this.db.prepare(sql);
-      const converted = params.map(p => p === true ? 1 : p === false ? 0 : p);
       return converted.length > 0 ? stmt.get(...converted) : stmt.get();
     }
   }
 
   async exec(sql) {
     await this.init();
-
     if (this.type === 'mysql') {
       await this.pool.execute(sql);
     } else if (this._isLibsql) {
@@ -139,7 +152,7 @@ class Database {
     } else if (this._isLibsql) {
       const batchStmts = statements.map(s => ({
         sql: s.sql,
-        args: s.args || [],
+        args: this._convertParams(s.args || []),
       }));
       const results = await this.db.batch(batchStmts);
       return results.map(r => ({
@@ -151,7 +164,7 @@ class Database {
         const results = [];
         for (const stmt of stmts) {
           const s = this.db.prepare(stmt.sql);
-          const args = (stmt.args || []).map(p => p === true ? 1 : p === false ? 0 : p);
+          const args = this._convertParams(stmt.args || []);
           const info = args.length > 0 ? s.run(...args) : s.run();
           results.push({
             insertId: Number(info.lastInsertRowid),
