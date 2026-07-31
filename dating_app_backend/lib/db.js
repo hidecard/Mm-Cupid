@@ -30,9 +30,10 @@ class Database {
         console.error('MySQL connection failed:', err.message);
       }
     } else {
-      const dbPath = process.env.TURSO_URL?.replace('file:', '') || 'dev.db';
+      const isRemote = process.env.TURSO_URL &&
+          (process.env.TURSO_URL.startsWith('https://') || process.env.TURSO_URL.startsWith('libsql://'));
 
-      if (process.env.TURSO_URL && process.env.TURSO_URL.startsWith('https://')) {
+      if (isRemote) {
         const { createClient } = require('@libsql/client');
         this.db = createClient({
           url: process.env.TURSO_URL,
@@ -40,11 +41,9 @@ class Database {
         });
         this._isLibsql = true;
       } else {
+        const dbPath = process.env.TURSO_URL?.replace('file:', '') || 'dev.db';
         this.db = new BetterSqlite(dbPath);
         this._isLibsql = false;
-      }
-
-      if (!this._isLibsql) {
         this.db.pragma('journal_mode = WAL');
         this.db.pragma('foreign_keys = ON');
       }

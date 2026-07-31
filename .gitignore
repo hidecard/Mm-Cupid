@@ -1,0 +1,41 @@
+# Database
+dev.db
+dev.db-wal
+dev.db-shm
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Node Modules
+node_modules/
+
+# Flutter
+.flutter-plugins
+.dart_tool/
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# Build output
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+server.log
