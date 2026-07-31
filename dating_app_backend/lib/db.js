@@ -65,7 +65,8 @@ class Database {
       return result.rows;
     } else {
       const stmt = this.db.prepare(sql);
-      return params.length > 0 ? stmt.all(...params) : stmt.all();
+      const converted = params.map(p => p === true ? 1 : p === false ? 0 : p);
+      return converted.length > 0 ? stmt.all(...converted) : stmt.all();
     }
   }
 
@@ -86,7 +87,8 @@ class Database {
       };
     } else {
       const stmt = this.db.prepare(sql);
-      const info = params.length > 0 ? stmt.run(...params) : stmt.run();
+      const converted = params.map(p => p === true ? 1 : p === false ? 0 : p);
+      const info = converted.length > 0 ? stmt.run(...converted) : stmt.run();
       return {
         insertId: Number(info.lastInsertRowid),
         affectedRows: info.changes,
@@ -105,7 +107,8 @@ class Database {
       return result.rows[0] || null;
     } else {
       const stmt = this.db.prepare(sql);
-      return params.length > 0 ? stmt.get(...params) : stmt.get();
+      const converted = params.map(p => p === true ? 1 : p === false ? 0 : p);
+      return converted.length > 0 ? stmt.get(...converted) : stmt.get();
     }
   }
 
@@ -149,7 +152,8 @@ class Database {
         const results = [];
         for (const stmt of stmts) {
           const s = this.db.prepare(stmt.sql);
-          const info = stmt.args && stmt.args.length > 0 ? s.run(...stmt.args) : s.run();
+          const args = (stmt.args || []).map(p => p === true ? 1 : p === false ? 0 : p);
+          const info = args.length > 0 ? s.run(...args) : s.run();
           results.push({
             insertId: Number(info.lastInsertRowid),
             affectedRows: info.changes,
